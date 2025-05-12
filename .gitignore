@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+.env
+app/
+deprecated/
+becas2.*
+comandos.*
+main.*
