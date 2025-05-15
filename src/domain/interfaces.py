@@ -13,3 +13,9 @@ class ScholarshipRepository(ABC):
 class IntentClassifierService(ABC):
     @abstractmethod
     def classify(self, text: str) -> Tuple[str, FilterCriteria]: ...
+    @abstractmethod
+    def classify_all(self, text: str) -> dict: ...
+    
+class LLMInterface(ABC):
+    @abstractmethod
+    def generate(self, prompt: str, history: List[Tuple[str, str]] = None) -> str: ...

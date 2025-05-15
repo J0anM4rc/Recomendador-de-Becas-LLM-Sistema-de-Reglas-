@@ -1,4 +1,4 @@
-from domain.interfaces import IntentClassifierService
+from domain.interfaces import IntentClassifierService, LLMInterface
 from domain.entities import FilterCriteria
 from langchain_ollama.llms import OllamaLLM
 from typing import Optional, List, Tuple
@@ -11,12 +11,12 @@ class DummyIntentClassifier(IntentClassifierService):
     def classify(self, text):
         return "fallback", FilterCriteria()
     
-class LLMInterface(IntentClassifierService):
+class LLAMA(LLMInterface):
     def __init__(self):
         self.llm = OllamaLLM(
             model="llama3.2",  # Asegúrate que este es el nombre correcto en tu Ollama
             temperature=0.1,   # Un poco de temperatura para respuestas más naturales
-            max_tokens=512
+            max_tokens=25
         )
         
     def generate(self, prompt: str, history: Optional[List[Tuple[str, str]]] = None) -> str:

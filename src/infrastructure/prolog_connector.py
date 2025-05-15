@@ -42,6 +42,7 @@ class PrologConnector(ScholarshipRepository):
     
     def find_by_filters(self, criteria):
         raise NotImplementedError
+    
     def list_all_names(self) -> List[str]:
         # Usamos findall para capturar todos los títulos
         query = "beca(Id)."

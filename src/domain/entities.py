@@ -12,9 +12,9 @@ class Scholarship:
 
 @dataclass
 class FilterCriteria:
-    organisation: Optional[str]=None
+    organization: Optional[str]=None
     area: Optional[str]=None
-    financing: Optional[str]=None
+    # financing: Optional[str]=None
     education_level: Optional[str]=None
     place: Optional[str]=None
     def is_complete(self) -> bool:
