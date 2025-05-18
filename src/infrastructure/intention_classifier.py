@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import logging
 
 from src.domain.interfaces import LLMInterface, IntentClassifierService
-from src.application.services.prolog_connector import NoResultsError, PrologConnector, PrologConnectorError
+from src.infrastructure.prolog_connector import NoResultsError, PrologConnector, PrologConnectorError
 
 logger = logging.getLogger(__name__)
 

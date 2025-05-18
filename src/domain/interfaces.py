@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Protocol, Tuple
+from typing import List, Tuple
 from domain.entities import Scholarship, FilterCriteria
 
 class ScholarshipRepository(ABC):
