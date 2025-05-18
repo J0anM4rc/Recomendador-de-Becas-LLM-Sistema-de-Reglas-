@@ -32,9 +32,9 @@ def test_classify_all_real_llm(real_classifier, msg, expected_intents):
     # for key in ("filters","navigation","confirmation","error"):
     #     assert key in out
 
-    # # Si es búsqueda por nombre, el filtro "name" no debe ser None
-    # if out["intencion"] == "buscar_por_nombre":
-    #     assert out["filters"].get("name"), f"Esperado filtro name para {msg!r}."
+    # Si es búsqueda por nombre, el filtro "name" no debe ser None
+    if out["intencion"] == "buscar_por_criterio":
+        assert out["filters"].get("name"), f"Esperado filtro name para {msg!r}."
 
     # # Si es búsqueda por código, debe mapear code
     # if out["intencion"] == "buscar_por_codigo":

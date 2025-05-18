@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import logging
 
 from src.domain.interfaces import LLMInterface, IntentClassifierService
-from src.infrastructure.prolog_connector import NoResultsError, PrologConnector, PrologConnectorError
+from src.application.services.prolog_connector import NoResultsError, PrologConnector, PrologConnectorError
 
 logger = logging.getLogger(__name__)
 
@@ -356,41 +356,41 @@ JSON de salida:
             return None
           
           
-    def classify(self, message: str, current_question: Optional[str] = None, available_options: Optional[List[str]] = None, is_confirming: bool = False) -> Dict[str, Any]:
+    def classify(self, message: str, current_question: Optional[str] = None, available_options: Optional[List[str]] = None, is_confirming: bool = False) -> dict:
         """
         Clasificación principal. Ahora puede tomar contexto del flujo guiado.
         """
-        # Si estamos en el flujo guiado (se proporciona current_question y options)
-        if current_question and available_options and not is_confirming:
-            guided_interpretation = self.interpret_guided_response(message, current_question, available_options)
-            # Si el LLM encontró una opción o una intención de navegación, se considera parte del flujo guiado
-            if guided_interpretation["chosen_option"] or guided_interpretation["navigation_intent"]:
-                return {
-                    "intencion": "respuesta_guiada", # Nueva pseudo-intención para el flujo
-                    "chosen_option": guided_interpretation["chosen_option"],
-                    "navigation_intent": guided_interpretation["navigation_intent"],
-                    "argumento": None # Argumento principal no aplica aquí
-                }
+        # # Si estamos en el flujo guiado (se proporciona current_question y options)
+        # if current_question and available_options and not is_confirming:
+        #     guided_interpretation = self.interpret_guided_response(message, current_question, available_options)
+        #     # Si el LLM encontró una opción o una intención de navegación, se considera parte del flujo guiado
+        #     if guided_interpretation["chosen_option"] or guided_interpretation["navigation_intent"]:
+        #         return {
+        #             "intencion": "respuesta_guiada", # Nueva pseudo-intención para el flujo
+        #             "chosen_option": guided_interpretation["chosen_option"],
+        #             "navigation_intent": guided_interpretation["navigation_intent"],
+        #             "argumento": None # Argumento principal no aplica aquí
+        #         }
         
-        # Si estamos en una fase de confirmación
-        if is_confirming:
-            confirmation_status = self.interpret_confirmation_response(message)
-            return {
-                "intencion": "respuesta_confirmacion", # Nueva pseudo-intención
-                "confirmation_status": confirmation_status, # "si" o "no"
-                "argumento": None
-            }
+        # # Si estamos en una fase de confirmación
+        # if is_confirming:
+        #     confirmation_status = self.interpret_confirmation_response(message)
+        #     return {
+        #         "intencion": "respuesta_confirmacion", # Nueva pseudo-intención
+        #         "confirmation_status": confirmation_status, # "si" o "no"
+        #         "argumento": None
+        #     }
 
         # Si no es una respuesta guiada directa ni confirmación, hacer clasificación general de intención
         intent = self.classify_intent(message)
         argument = None
 
-        if intent == "info_beca":
-            argument = self.extract_beca_argument(message)
-        elif intent == "explicacion_termino": # Coincidir con el nombre del prompt y la intención
-            argument = self.extract_type_argument(message) # Usar el método renombrado
-        # La intención "guiado" ahora es más para iniciar el flujo o para respuestas que el LLM no pudo mapear a una opción/navegación directa.
-        # La intención "navegacion_conversacion" es para comandos de navegación más explícitos fuera del 'interpret_guided_response'.
+        # if intent == "info_beca":
+        #     argument = self.extract_beca_argument(message)
+        # elif intent == "explicacion_termino": # Coincidir con el nombre del prompt y la intención
+        #     argument = self.extract_type_argument(message) # Usar el método renombrado
+        # # La intención "guiado" ahora es más para iniciar el flujo o para respuestas que el LLM no pudo mapear a una opción/navegación directa.
+        # # La intención "navegacion_conversacion" es para comandos de navegación más explícitos fuera del 'interpret_guided_response'.
 
         return {"intencion": intent, "argumento": argument}
 
@@ -433,7 +433,7 @@ JSON de salida:
         return None
 
 
-    def extract_type_argument(self, message: str) -> Optional[List[str]]: # Renombrado de tipo_beca_criterio
+    def extract_type_argument(self, message: str) -> Optional[List[str]]: 
         if not self.posibles_tipos_beca_criterio:
             logger.debug("No hay posibles_tipos_beca_criterio definidos para extraer argumentos.")
             return None
