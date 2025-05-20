@@ -6,11 +6,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-class DummyIntentClassifier(IntentClassifierService):
-    def __init__(self, model_path): ...
-    def classify(self, text):
-        return "fallback", FilterCriteria()
-    
+# Tanto llama3.2:3b y gemma3:4b funcionan correctamente. Sin embargo, llama3.2:3b es más rápido y consume menos recursos.
+# gemma3:4b es más preciso y tiene un mejor rendimiento en tareas complejas.
 class LLAMA(LLMInterface):
     def __init__(self):
         self.llm = OllamaLLM(

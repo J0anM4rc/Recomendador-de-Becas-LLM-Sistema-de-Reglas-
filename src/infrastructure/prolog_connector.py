@@ -31,9 +31,8 @@ class PrologService:
         self._thread = self._mqi.create_thread()
 
         # Cargar la KB una sola vez, usando rutas con barras '/'
-        path_str = self.kb_path.resolve().as_posix()
-        with self._thread as prolog:
-            prolog.query(f"consult('{path_str}')")
+        self.path_str = self.kb_path.resolve().as_posix()
+
 
     def query(self, goal: str, vars: List[str]) -> List[Dict[str, Any]]:
         """
@@ -50,6 +49,7 @@ class PrologService:
         """
         try:
             with self._thread as prolog:
+                prolog.query(f"consult('{self.path_str}')")
                 raw = prolog.query(goal)
                 if isinstance(raw, bool):
                     if not raw:

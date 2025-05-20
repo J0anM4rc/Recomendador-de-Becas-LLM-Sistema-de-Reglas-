@@ -1,5 +1,7 @@
 import re
 from src.application.pipeline.interfaces import IHandler, HandlerContext
+from src.domain.interfaces import IntentClassifierService
+from src.infrastructure.intention_classifier import IntentionClassifier
 
 class PreprocessHandler(IHandler):
     def __init__(self, next_handler: IHandler = None):
@@ -30,7 +32,7 @@ class HistoryHandler(IHandler):
 
     def handle(self, ctx: HandlerContext) -> HandlerContext:
         # 1. Antes de procesar: añadir el mensaje del usuario al historial
-        ctx.history.append({"role": "user", "content": ctx.raw_text})
+        ctx.history.append({"role": "user", "content": ctx.normalized_text})
 
         # 2. Procesar siguiente handler
         if self.next:
@@ -46,7 +48,33 @@ class HistoryHandler(IHandler):
             ctx.history = ctx.history[-self.max_history:]
 
         return ctx
-class IntentHandler(IHandler): pass
+    
+class IntentHandler(IHandler):
+    def __init__(self, classifier: IntentClassifierService = IntentionClassifier(), next_handler: IHandler = None):
+        self.classifier = classifier
+        self.next = next_handler
+
+    def handle(self, ctx: HandlerContext) -> HandlerContext:
+        if len(ctx.history) > 1:
+            # excluimos el último mensaje y tomamos hasta 4 antes de él
+            history_to_consider = ctx.history[:-1]
+            last_msgs = history_to_consider[-4:]
+        else:
+            last_msgs = []
+
+        # Formatear como texto para pasar al clasificador
+        history_snippet = "\n".join(
+            f"{msg['role'].capitalize()}: {msg['content']}" for msg in last_msgs
+        )
+
+        intent_result = self.classifier.classify(message = ctx.normalized_text, context=history_snippet, last_intention=ctx.last_intention)
+        ctx.intention = intent_result.get("intention")
+
+        # 2. Pasar al siguiente handler
+        if self.next:
+            return self.next.handle(ctx)
+        return ctx
+    
 class ArgumentHandler(IHandler): pass
 class FlowHandler(IHandler): pass
 class GenerationHandler(IHandler): pass

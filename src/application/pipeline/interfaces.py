@@ -13,30 +13,36 @@ class IntentResultDTO:
     intention: Optional[str] = None
     
 @dataclass
-class FilterCriteriaDTO:
+class BuscarPorCriterioDTO:
+    question: Optional[str] = None
+    options: Optional[List[str]] = None
+    
     area: Optional[str] = None
+    organization: Optional[str] = None
     education_level: Optional[str] = None
-    financing: Optional[str] = None
-    place: Optional[str] = None
+    location: Optional[str] = None
 
     def to_domain(self) -> FilterCriteria:
         return FilterCriteria(
+            question=self.question,
+            options=self.options,
             area=self.area,
             education_level=self.education_level,
-            financing=self.financing,
-            place=self.place
+            location=self.location,
+            organization=self.organization
         )
       
+
 
 @dataclass
 class HandlerContext:
     raw_text: str
     normalized_text: str = None
     intention: Optional[str] = None
+    last_intention: Optional[str] = None
     raw_intent_payload: Dict[str, Any] = field(default_factory=dict)
 
-    # slots que el ArgumentHandler rellenará
-    filters: FilterCriteriaDTO = field(default_factory=FilterCriteriaDTO)
+  
     history: List[Dict[str, str]] = field(default_factory=list)
     # sugerencias que puede devolver el handler
     suggestions: List[str] = field(default_factory=list)

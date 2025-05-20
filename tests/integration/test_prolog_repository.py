@@ -46,12 +46,3 @@ def test_get_all_scholarships_names(prolog_svc):
     assert isinstance(scholarships, list)
     assert all(isinstance(scholarship, str) for scholarship in scholarships), "Todos los valores de beca deben ser strings"
 
-# def test_all_values_are_strings(criteria_repo):
-#     for fn in (
-#         criteria_repo.list_study_areas,
-#         criteria_repo.list_organization,
-#         criteria_repo.list_financing_types,
-#         criteria_repo.list_places,
-#     ):
-#         values = fn()
-#         assert all(isinstance(v, str) for v in values), f"Todos los valores de {fn.__name__} deben ser strings"
