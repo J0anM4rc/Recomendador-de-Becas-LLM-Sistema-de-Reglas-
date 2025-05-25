@@ -3,7 +3,6 @@
     "ask_field": {
         "campo_estudio":
             {
-                
                 "label": "Área de estudios",
                 "prompt": "¿En qué área de estudios te interesan las becas?",
                 "options": ["ciencias_tecnicas", "ciencias_sociales", "arte_humanidades", "salud", "otros", "cualquiera"],

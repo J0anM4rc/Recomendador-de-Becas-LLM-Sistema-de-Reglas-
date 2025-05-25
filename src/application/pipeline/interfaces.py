@@ -28,6 +28,36 @@ class BuscarPorCriterioDTO:
             location=self.location,
             organization=self.organization
         )
+    def create_empty() -> 'BuscarPorCriterioDTO':
+        """
+        Crea un DTO vacío con todos los campos a None.
+        """
+        return BuscarPorCriterioDTO(
+            area=None,
+            education_level=None,
+            location=None,
+            organization=None
+        )
+    def is_complete(self) -> bool:
+        """
+        Devuelve True si todos los criterios están definidos.
+        """
+        return all([
+            self.area is not None,
+            self.education_level is not None,
+            self.location is not None,
+            self.organization is not None
+        ])
+    def is_empty(self) -> bool:
+        """
+        Devuelve True si no hay criterios activos.
+        """
+        return not any([
+            self.area,
+            self.education_level,
+            self.location,
+            self.organization
+        ])
       
     def has_pending_criteria(self) -> bool:
         """
@@ -54,20 +84,6 @@ class BuscarPorCriterioDTO:
         else:
             return None
     
-    def update_last_answered_criterion(self, new_value: str):
-        """
-        Modifica el valor para el último criterio respondido.
-        """
-        if self.area is None:
-            self.area = new_value
-        elif self.education_level is None:
-            self.education_level = new_value
-        elif self.location is None:
-            self.location = new_value
-        elif self.organization is None:
-            self.organization = new_value
-        else:
-            raise ValueError("No hay criterios pendientes de respuesta.")
     def apply(self, result: Dict[str, Any]):
         """
         Aplica los resultados de la clasificación a los campos correspondientes.
@@ -115,8 +131,11 @@ class HandlerContext:
         Devuelve un string con la última interacción completa:
         Asistente: …\nUsuario: …
         """
-        if len(self.history) < 2:
+        if len(self.history) == 0:
             return ""
+        if len(self.history) < 2:
+            # Si solo hay un mensaje, devolvemos solo el último
+            return f"Usuario: {self.history[-1]['content']}"
         # history almacena alternadamente user/assistant
         last_bot = self.history[-2]["content"]
         last_user = self.history[-1]["content"]

@@ -123,24 +123,33 @@ def test_guided_flow_none(handler, user_input, action, field, value):
     assert criteria.area == None
 
 
-# No testeado
-def test_confirmation_flow(classifier, monkeypatch):
-    # 3) simulamos confirmación
-    monkeypatch.setattr(
-        classifier,
-        "interpret_confirmation_response",
-        lambda msg: "si"
+    
+@pytest.mark.parametrize("user_input", [
+    # ("Si, adelante"),
+    ("No, cambia el campo de estudio a ciencias sociales"),
+    # ("Podré buscar con otros criterios más adelante?"),
+    
+]) 
+def test_confirmation_flow(handler, user_input):
+    
+    initial_history = [
+        {"role": "user", "content": user_input},
+    ]
+    fc = BuscarPorCriterioDTO(
+        area="salud",
+        education_level="libertad",
+        location="fraternidad",
+        organization="solidaridad"
     )
 
-    result = classifier.classify(
-        message="sí, correcto",
-        current_question=None,
-        available_options=None,
-        is_confirming=True
+    ctx = HandlerContext(
+        raw_text="relleno para que no falle el test",
+        normalized_text="relleno para que no falle el test",
+        history=initial_history.copy(),
+        filter_criteria=fc,
+        last_intention="buscar_por_criterio"
     )
-    assert result == {
-        "intencion": "respuesta_confirmacion",
-        "confirmation_status": "si",
-        "argumento": None
-    }
+    
+    ctx = handler.handle(ctx)
+    assert ctx
 

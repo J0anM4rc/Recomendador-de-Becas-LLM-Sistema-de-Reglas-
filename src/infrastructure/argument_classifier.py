@@ -40,38 +40,132 @@ Mensaje del usuario:
 \"\"\"{message}\"\"\"
 JSON de salida:
 """
-        # Prompt para extraer la opción elegida por el usuario en el flujo guiado
-        self.guided_response_prompt = """
-Estás ayudando a interpretar la respuesta del usuario dentro de un flujo de búsqueda de becas.
-
-La pregunta actual fue: "{current_question}"
-Opciones válidas: {available_options_str}
-
-Reglas de interpretación:
-1. Si el mensaje del usuario es una pregunta (termina con “?” o comienza con palabras interrogativas como “qué”, “cómo”, “cuándo”, “por qué”, etc.), devuelve ambos valores como null.
-2. Si el usuario selecciona claramente una de las opciones (por nombre exacto o expresión equivalente), pon esa opción en `"chosen_option"` y `"navigation_intent": null`.
-3. Si el usuario indica que quiere volver a la pregunta anterior usando expresiones como “atrás”, “volver”, “regresa”, “espera, cambia la anterior”, “quiero modificar la anterior”, etc., pon `"chosen_option": null` y `"navigation_intent": "atras"`.
-4. Si no queda claro ni una selección ni un deseo de navegación, devuelve ambos valores como null.
-5. Entre las opciones `"otro"` y `"cualquiera"`, si hay ambigüedad, elige `"cualquiera"`.
-
-Devuelve SOLO este JSON (en minúsculas, sin comentarios ni texto adicional):
+        self.interpret_confirmation= """
+### 1 · Plantilla de salida (OBLIGATORIA)
 {{
-  "chosen_option": "ID_OPCION_VALIDA_O_NULL",
-  "navigation_intent": "atras_o_null"
+    "confirmation": "yes | no"
 }}
 
-Mensaje del usuario:
-\"\"\"{user_message}\"\"\"
+--------------------------------------------------------------------
+### 2 · Reglas de interpretación
+1. **Confirmación**
+    - Si el mensaje del usuario indica una afirmación clara (ej. "sí", "correcto", "vale") ⇒ `"confirmation": "yes"` .
+2. **Negación**
+    - Si el mensaje del usuario indica una negación clara (ej. "no", "incorrecto", "no es eso") ⇒ `"confirmation": "no"`.
+3. **Ambigüedad**
+    - Si el mensaje no es claro o no contiene una afirmación/negación clara ⇒ devuelve `"confirmation": "null"`.
+--------------------------------------------------------------------
+### 3 · Ejemplos de uso
+**Ejemplo A — Confirmación**
+Mensaje:
+Usuario: Dale
+```json
+{{
+    "confirmation": "yes"
+}}
 
+**Ejemplo B — Confirmación**
+Mensaje:
+Usuario: Si
+```json
+{{
+    "confirmation": "yes"
+}}
+
+**Ejemplo C — Negación**
+Mensaje:
+Usuario: No, no es eso
+```json
+{{
+    "confirmation": "no"
+}}
+
+**Ejemplo C — Negación**
+Mensaje:
+Usuario: Cambio el financiamiento a cualquiera
+```json
+{{
+    "confirmation": "no"
+}}
+
+--------------------------------------------------------------------
+Mensaje del usuario:
+\"\"\"\n
+{context}
+\n\"\"\"
 
 JSON de salida:
 
 """
 
-# ------------ guided_response_prompt pero permite modificar cualquier criterio ------------
-#         Estás ayudando a interpretar la respuesta del usuario dentro de un flujo guiado de búsqueda de becas.
+        self.initial_criteria = """
+### 1 · Plantilla de salida (OBLIGATORIA)
+{{
+    "action": "select | null",
+    "field":  "criterio_o_null",
+    "value":  "ID_OPCION_VALIDA_O_NULL"
+}}
+--------------------------------------------------------------------
+### 2 · Tabla de criterios y valores permitidos
+| field            | valores válidos (ID exacto)                              |
+{criteria_table}
+|------------------|----------------------------------------------------------|
+Si el `value` propuesto **no** aparece en la columna del `field` elegido,
+responde con los tres `null`.
+--------------------------------------------------------------------
 
-        self.test = """
+### 3 · Reglas de interpretación
+
+1. **Selección de criterio**
+    - Si el usuario **elige** claramente una de las opciones (nombre    
+        exacto, equivalente claro o número de opcion en el mensaje del asistente) ⇒
+        `"action": "select"`, `"field"` según la tabla, `"value"` opción válida.
+2. **Ambigüedad**   
+    - Si no queda claro lo que quiere o no menciona valores de la tabla ⇒
+        devuelve todo `null`.
+--------------------------------------------------------------------
+
+### 4 · Check-list antes de responder 
+
+1. ¿`action` ∈ {{ select, null}}?  
+2. Si `action` ≠ null:  
+   - ¿`field` ∈ {{organismo, nivel, campo_estudio}}?  
+   - ¿`value` está en la columna correcta?  
+3. Si falla cualquier punto → devuelve los tres `null`.
+--------------------------------------------------------------------
+### 5 · Ejemplos de uso
+**Ejemplo A — Selección**
+Mensaje:
+Usuario: Quiero buscar un beca para mi grado
+
+```json
+{{
+  "action": "select",
+   "field": "nivel",
+   "value": "grado"
+}}
+
+**Ejemplo B — Sin Selección**
+Mensaje:
+Usuario: Quiero buscar un beca
+```json
+{{
+  "action": "null",
+    "field": null,
+    "value": null
+}}
+--------------------------------------------------------------------
+Mensaje del usuario:
+\"\"\"\n
+{context}
+\n\"\"\"
+
+JSON de salida:
+
+"""
+
+
+        self.criterion_response = """
 ### 1 · Plantilla de salida (OBLIGATORIA)
 
 {{
@@ -271,11 +365,9 @@ JSON de salida:
 
         return "\n".join(rows) 
              
-    def classify_with_test_promt(self, message: str, available_options: Optional[List[str]] = None, context : str = None) -> dict:
-        
-        
+    def classify_criterion_response(self, available_options: Optional[List[str]] = None, context : str = None) -> dict:
         available_options = self.build_criteria_table(available_options)
-        prompt = self.test.format(
+        prompt = self.criterion_response.format(
             criteria_table=available_options,
             context=context or "",
         )
@@ -283,74 +375,64 @@ JSON de salida:
         extracted = self._extract_json(raw_response)
         if not isinstance(extracted, dict):
             logger.error(f"No se extrajo JSON válido del LLM. Raw: {raw_response}")
-            return {"chosen_option": None, "navigation_intent": None, "target_question": None, "new_option": None}
+            return {"action": None, "field": None, "value": None}
 
         result = {k: (None if extracted.get(k) in [None, "null"] else extracted.get(k))
                   for k in ["action", "field", "value"]}
 
-        # if result["chosen_option"] and available_options and result["chosen_option"] not in available_options:
-        #     logger.warning(f"Opción elegida no válida: {result['chosen_option']}")
-        #     result["chosen_option"] = None
-
         return result
     
-    def classify(self, message: str, answered_q: list[str], current_question: Optional[str] = None, available_options: Optional[List[str]] = None, is_confirming: bool = False) -> dict:
+    def extract_initial_criteria(self, context: Optional[str] = None) -> dict:
         """
-        Clasificación principal. Ahora puede tomar contexto del flujo guiado.
+        Extrae el criterio inicial del mensaje del usuario.
+        Devuelve un dict con "action", "field" y "value".
         """
+        available_options = self.build_criteria_table(["campo_estudio", "nivel", "financiamiento", "organismo"])
+        prompt = self.initial_criteria.format(
+            criteria_table=available_options,
+            context=context or "",
+        )
+        raw_response = self.llm.generate(prompt)
+        extracted = self._extract_json(raw_response)
 
+        if not isinstance(extracted, dict):
+            logger.error(f"No se extrajo JSON válido del LLM. Raw: {raw_response}")
+            return {"action": None, "field": None, "value": None}
 
-        if current_question and available_options:
-            word_count = len(message.strip().split())
-            if word_count <= 4:
-                ordinal_map = {
-                    r"\bprimera|primer[o|a]\b": 0,
-                    r"\bsegunda|segund[o|a]\b": 1,
-                    r"\btercera|tercer[o|a]\b": 2,
-                    r"\bcuarta|cuart[o|a]\b": 3,
-                    r"\bquinta|quint[o|a]\b": 4,
-                    r"\bsexta|sext[o|a]\b": 5,
-                }
+        result = {k: (None if extracted.get(k) in [None, "null"] else extracted.get(k))
+                  for k in ["action", "field", "value"]}
+        return result
 
-                for pattern, index in ordinal_map.items():
-                    if re.search(pattern, message, re.IGNORECASE):
-                        if index < len(available_options):
-                            return {
-                                "chosen_option": available_options[index],
-                                "navigation_intent": None,
-                            }
-        # Si estamos en el flujo guiado (se proporciona current_question y options)
-        if current_question and available_options and not is_confirming:
-            guided_interpretation = self.interpret_guided_response(message, current_question, available_options)
-            # Si el LLM encontró una opción o una intención de navegación, se considera parte del flujo guiado
-            
-            
-            return {
-                "chosen_option": guided_interpretation["chosen_option"],
-                "navigation_intent": guided_interpretation["navigation_intent"],
-            }
+    def detect_confirmation(self, context: str) -> dict:
+        """
+        Usa el LLM para interpretar si el usuario confirma ("si") o niega ("no").
+        """
+        available_options = self.build_criteria_table(["campo_estudio", "nivel", "financiamiento", "organismo"])
+        prompt = self.interpret_confirmation.format(
+            criteria_table=available_options,
+            context=context or "",
+        )
+
+        raw_response = self.llm.generate(prompt)
+        extracted_data = self._extract_json(raw_response)
         
-        # Si estamos en una fase de confirmación
-        if is_confirming:
-            confirmation_status = self.interpret_confirmation_response(message)
-            return {
-                "intencion": "respuesta_confirmacion", # Nueva pseudo-intención
-                "confirmation_status": confirmation_status, # "si" o "no"
-            }
-        return {"error": "No se pudo clasificar la intención del mensaje."}
-
-        # Si no es una respuesta guiada directa ni confirmación, hacer clasificación general de intención
-        # intent = self.classify_intent(message)
-        # argument = None
-
-        # if intent == "info_beca":
-        #     argument = self.extract_beca_argument(message)
-        # elif intent == "explicacion_termino": # Coincidir con el nombre del prompt y la intención
-        #     argument = self.extract_type_argument(message) # Usar el método renombrado
-        # # La intención "guiado" ahora es más para iniciar el flujo o para respuestas que el LLM no pudo mapear a una opción/navegación directa.
-        # # La intención "navegacion_conversacion" es para comandos de navegación más explícitos fuera del 'interpret_guided_response'.
-
-        # return {"intencion": intent, "argumento": argument}
+        if not isinstance(extracted_data, dict):
+            logger.warning(f"Confirmación no es objeto JSON: {extracted_data!r}")
+            return {"confirmation": None}
+        
+        conf = extracted_data.get("confirmation")
+        if conf == "yes":
+            return {"confirmation": "yes"}
+        if conf == "no":
+            return {"confirmation": "no"}
+        if conf is None or conf == "null":
+            # Si no hay confirmación clara, devolvemos None
+            return {"confirmation": None}
+        
+        # Cualquier otro valor lo consideramos ambiguo
+        logger.warning(f"Valor inesperado de confirmation: {conf!r}")
+        return {"confirmation": None}
+        
 
     def classify_intent(self, message: str) -> str:
         prompt = self.intent_prompt.format(message=message)
@@ -454,21 +536,3 @@ JSON de salida:
             logger.error(f"Failed to extract valid JSON from LLM for guided response. Raw: {raw_response}")
             return {"chosen_option": None, "navigation_intent": None} # Fallback seguro
 
-    def interpret_confirmation_response(self, user_message: str) -> str:
-        """
-        Usa el LLM para interpretar si el usuario confirma ("si") o niega ("no").
-        """
-        prompt = self.confirmation_interpretation_prompt.format(user_message=user_message)
-        raw_response = self.llm.generate(prompt)
-        extracted_data = self._extract_json(raw_response)
-
-        if isinstance(extracted_data, dict):
-            confirmation = extracted_data.get("confirmation")
-            if confirmation in ["si", "no"]:
-                return confirmation
-            else:
-                logger.warning(f"LLM returned invalid confirmation value: '{confirmation}'. Defaulting to 'no'.")
-                return "no" # Default seguro si la respuesta no es clara
-        else:
-            logger.error(f"Failed to extract valid JSON from LLM for confirmation. Raw: {raw_response}. Defaulting to 'no'.")
-            return "no" # Fallback seguro

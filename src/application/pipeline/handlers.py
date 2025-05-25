@@ -5,7 +5,7 @@ from src.domain.entities import DialogAct
 from src.domain.interfaces import IntentClassifierService, ArgumentClassifierService
 from src.infrastructure.intention_classifier import IntentionClassifier
 from src.infrastructure.argument_classifier import ArgumentClassifier
-from src.infrastructure.llm_response_builder import ResponseBuilder
+from src.infrastructure.llm_response_builder import TemplateResponseBuilder
 
 
 class PreprocessHandler(IHandler):
@@ -59,42 +59,82 @@ class CriteriaSearchHandler(IHandler):
         self,
         classifier: ArgumentClassifierService = ArgumentClassifier(),
         next_handler: Optional[IHandler] = None,
-        responder: "ResponseBuilder" = None,
+        responder: "TemplateResponseBuilder" = None,
     ):
         self.classifier = classifier
         self.next = next_handler
-        self.responder = responder or ResponseBuilder()
+        self.responder = responder or TemplateResponseBuilder()
 
     # ---------- 1) Punto de entrada ----------
     def handle(self, ctx: HandlerContext) -> HandlerContext:
-        # if ctx.last_intention != "buscar_por_criterio":
-        #     # Ni siquiera lo intento: paso al siguiente
-        #     return self.next.handle(ctx) if self.next else ctx
-
-        # ---- Intento clasificar dentro del flujo de criterios ----
-        result = self.classifier.classify_with_test_promt(
-            message=ctx.normalized_text,
-            available_options=ctx.filter_criteria.active_fields,
-            context=ctx.last_interaction()
-        )
-
-        if all(result.get(k) is not None for k in ("action", "field", "value")):
-            # 1) Lista de actos
+        if ctx.last_intention != "buscar_por_criterio":
+            return self.next.handle(ctx) if self.next else ctx
+        
+        # Caso 1: El empieza la búsqueda por criterios
+        elif not ctx.filter_criteria:
+            # Si no hay criterios, inicializamos uno nuevo
+            ctx.filter_criteria = ctx.filter_criteria.create_empty()
+            result = self.classifier.extract_initial_criteria(
+                context=ctx.last_interaction()
+            )
             acts: list[DialogAct] = []
-
-            # a) Acto principal que devuelve filter_criteria.apply()
-            act = ctx.filter_criteria.apply(result)      # puede ser None si no hubo cambio
-            if act:
-                acts.append(act)
-
-            # b) Preguntar el siguiente campo, si lo hay
+            acts.append(DialogAct(type="start_criteria_search", field=None, old=None, new=None))
+            if all(result.get(k) is not None for k in ("action", "field", "value")):
+                if act := ctx.filter_criteria.apply(result):
+                    acts.append(act)
             if ctx.filter_criteria.has_pending_criteria():
-                next_field = ctx.filter_criteria.next_pending_field()
-                acts.append(DialogAct(type="ask_field", field=next_field))
+                next_field = ctx.filter_criteria.next_pending()
+                acts.append(DialogAct(type="ask_field", field=next_field))                
+            return ctx
+                    
+        # Caso 2: El usuario ha respondido todos los criterios y se le pregunta si confirma la búsqueda
+        elif ctx.filter_criteria and ctx.filter_criteria.is_complete():
+            # Si ya hay criterios y están completos, no hacemos nada
+            breakpoint()
+            result = self.classifier.detect_confirmation(
+                context=ctx.last_interaction()
+            )
+            acts: list[DialogAct] = []
+            confirmation = result.get("confirmation")
+            if confirmation == 'no':
+                acts.append(DialogAct(type="reject_search", field=None, old=None, new=None))
+                result = self.classifier.extract_initial_criteria(
+                    context=ctx.last_interaction()
+                )
+                
+                if all(result.get(k) is not None for k in ("action", "field", "value")):
+                    if act := ctx.filter_criteria.apply(result):
+                        acts.append(act)
+            elif confirmation == "yes":
+                acts.append(DialogAct(type="confirm_search", field=None, old=None, new=None))
+                ctx.response_payload = ctx.filter_criteria.search()
+                
+            return ctx
+            
+        # Caso 3: El usuario ha respondido a un criterio pendiente    
+        elif ctx.filter_criteria and ctx.filter_criteria.has_pending_criteria():
+            result = self.classifier.classify_criterion_response(
+                    available_options=ctx.filter_criteria.active_fields,
+                    context=ctx.last_interaction()
+                )
 
-            # 2) Enviamos siempre la misma estructura al builder
-            ctx.response_message = self.responder.render(acts=acts, ctx=ctx)
-            return ctx  
+            if all(result.get(k) is not None for k in ("action", "field", "value")):
+                # 1) Lista de actos
+                acts: list[DialogAct] = []
+
+                # a) Acto principal que devuelve filter_criteria.apply()
+                act = ctx.filter_criteria.apply(result)      # puede ser None si no hubo cambio
+                if act:
+                    acts.append(act)
+
+                # b) Preguntar el siguiente campo, si lo hay
+                if ctx.filter_criteria.has_pending_criteria():
+                    next_field = ctx.filter_criteria.next_pending()
+                    acts.append(DialogAct(type="ask_field", field=next_field))
+
+                # 2) Enviamos siempre la misma estructura al builder
+                ctx.response_message = self.responder.render(acts=acts, ctx=ctx)
+                return ctx  
 
 
         return self.next.handle(ctx) if self.next else ctx
