@@ -4,12 +4,12 @@ from typing import Any, Dict, List, Optional
 import logging
 
 from src.domain.interfaces import LLMInterface, IntentClassifierService
-from src.infrastructure.llm_interface import LLAMA
+from src.infrastructure.llm_interface import GEMMA
 
 logger = logging.getLogger(__name__)
 
 class IntentionClassifier(IntentClassifierService):
-    def __init__(self, llm : LLMInterface = LLAMA()):
+    def __init__(self, llm : LLMInterface = GEMMA()):
         self.llm = llm
         self.intent_prompt = """
 Analiza el contexto de conversacion y el siguiente mensaje del usuario y clasifícalo **estrictamente en UNA** de las siguientes intenciones.  
@@ -98,7 +98,7 @@ JSON de salida:
             return None
           
           
-    def classify(self, message: str, context: str = None, last_intention: str = None) -> dict:
+    def classify_intention(self, message: str, context: str = None, last_intention: str = None) -> dict:
         """
         Clasificación principal. Ahora puede tomar contexto del flujo guiado.
         """

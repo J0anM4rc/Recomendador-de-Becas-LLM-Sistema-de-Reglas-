@@ -2,66 +2,128 @@
 import pytest
 from typing import Any, Dict, List, Optional
 
+from src.application.pipeline.handlers import CriteriaSearchHandler
+from src.application.pipeline.interfaces import BuscarPorCriterioDTO, HandlerContext, IHandler
 from src.infrastructure.prolog_connector import ScholarshipRepository
-from src.infrastructure.llm_interface import LLAMA
 from src.infrastructure.argument_classifier import ArgumentClassifier
 
-
-
-# -
-
-
-
-
-
-# --- FIXTURE ----------------------------------------------------------------
+class DummyNextHandler(IHandler):
+    def handle(self, ctx: HandlerContext) -> HandlerContext:
+        ctx.response_payload = {"text": "dummy response"}
+        return ctx
 
 @pytest.fixture
-def classifier():
-    # Lo inicializamos con stubs; usamos un LLM que por defecto no hace nada
-    llm = LLAMA()
-    return ArgumentClassifier(llm=llm)
+def handler():
+    return CriteriaSearchHandler(next_handler=DummyNextHandler())
+
+
+
 
 
 # --- TESTS -------------------------------------------------------------------
-
-def test_guided_flow_chosen_option(classifier):
-    # 1) simulamos que interpret_guided_response detecta opción
-    result = classifier.classify(
-        message="Cuantas preguntas quedan?",
-        current_question="¿En qué área de estudios te interesan las becas?",
-        available_options=["ciencias_tecnicas", "ciencias_sociales", "arte_humanidades", "salud", "otro", "cualquiera"],
-        is_confirming=False
+@pytest.mark.parametrize("user_input, action, field, value", [
+    ("posgrado", "select", "nivel", "posgrado"),
+    ("la tercera opcion", "select", "nivel", "postobligatoria_no_uni"),
+    ("a la que pertenezca ingenieria informatica","select", "nivel", "grado"),
+    ("la que sea","select", "nivel", "cualquiera"),
+    ("otro","select", "nivel", "otro"),
+    
+])
+def test_guided_flow_select_answers(handler, user_input, action, field, value):
+    
+    initial_history = [
+        {"role": "assistant", "content": "¿En qué área de estudios te interesan las becas? Opciones: ciencias_tecnicas, ciencias_sociales, arte_humanidades, salud, otro"},
+        {"role": "user", "content": "salud esta bien"},
+        {"role": "assistant", "content": "Vale, entonces salut, ahora ¿Para qué nivel educativo es la beca? Opciones: grado, posgrado, postobligatoria_no_uni, otro"},
+        {"role": "user", "content": user_input},
+    ]
+    fc = BuscarPorCriterioDTO(
+        active_fields=["campo_estudio", "nivel"],
+        area="salud",
+        education_level=None,
+        location=None,
+        organization=None
     )
-    print(result)
-    assert result == {
-        "chosen_option": "cualquiera",
-        "navigation_intent": None,
-        "argumento": None
-    }
-
-
-def test_guided_flow_navigation(classifier, monkeypatch):
-    # 2) simulamos que quiere saltar
-    monkeypatch.setattr(
-        classifier,
-        "interpret_guided_response",
-        lambda msg, q, opts: {"chosen_option": None, "navigation_intent": "saltar_omitir"}
+    ctx = HandlerContext(
+        raw_text="relleno para que no falle el test",
+        normalized_text="relleno para que no falle el test",
+        history=initial_history.copy(),
+        filter_criteria=fc,
+        last_intention="buscar_por_criterio"
     )
+    ctx = handler.handle(ctx)
+    criteria = ctx.filter_criteria
+    
+    assert criteria.education_level == value
 
-    result = classifier.classify(
-        message="no me importa",
-        current_question="¿Nivel?",
-        available_options=["grado", "master"],
-        is_confirming=False
+@pytest.mark.parametrize("user_input, action, field, value", [
+    ("Espera, cambia la anterior a ciencias sociales", "modify", "campo_estudio", "ciencias_sociales"),
+    ("Pon el anterior en ciencias_sociales", "modify", "campo_estudio", "ciencias_sociales"),
+    ("Pon la anterior en cualquiera", "modify", "campo_estudio", "cualquiera"), # No funciona
+    ("Elimina la anterior", "modify", "campo_estudio", None), # No funciona
+    
+])
+def test_guided_flow_modify_answers(handler, user_input, action, field, value):
+    
+    initial_history = [
+        {"role": "assistant", "content": "¿En qué área de estudios te interesan las becas? Opciones: ciencias_tecnicas, ciencias_sociales, arte_humanidades, salud, otro"},
+        {"role": "user", "content": "salud esta bien"},
+        {"role": "assistant", "content": "Vale, entonces salut, ahora ¿Para qué nivel educativo es la beca? Opciones: grado, posgrado, postobligatoria_no_uni, otro"},
+        {"role": "user", "content": user_input},
+    ]
+    fc = BuscarPorCriterioDTO(
+        active_fields=["campo_estudio", "nivel"],
+        area="salud",
+        education_level=None,
+        location=None,
+        organization=None
     )
-    assert result == {
-        "chosen_option": None,
-        "navigation_intent": "saltar_omitir",
-        "argumento": None
-    }
+    ctx = HandlerContext(
+        raw_text="relleno para que no falle el test",
+        normalized_text="relleno para que no falle el test",
+        history=initial_history.copy(),
+        filter_criteria=fc,
+        last_intention="buscar_por_criterio"
+    )
+    ctx = handler.handle(ctx)
+    criteria = ctx.filter_criteria
+    
+    assert criteria.area == value
+    
+@pytest.mark.parametrize("user_input, action, field, value", [
+    ("Que cubre una beca parcial?", None, None, None),
+    ("No, quiero buscar una beca en concreto", None, None, None),
+    
+])
+def test_guided_flow_none(handler, user_input, action, field, value):
+    
+    initial_history = [
+        {"role": "assistant", "content": "¿En qué área de estudios te interesan las becas? Opciones: ciencias_tecnicas, ciencias_sociales, arte_humanidades, salud, otro"},
+        {"role": "user", "content": "salud esta bien"},
+        {"role": "assistant", "content": "Vale, entonces salut, ahora ¿Para qué nivel educativo es la beca? Opciones: grado, posgrado, postobligatoria_no_uni, otro"},
+        {"role": "user", "content": user_input},
+    ]
+    fc = BuscarPorCriterioDTO(
+        active_fields=["campo_estudio", "nivel"],
+        area="salud",
+        education_level=None,
+        location=None,
+        organization=None
+    )
+    ctx = HandlerContext(
+        raw_text="relleno para que no falle el test",
+        normalized_text="relleno para que no falle el test",
+        history=initial_history.copy(),
+        filter_criteria=fc,
+        last_intention="buscar_por_criterio"
+    )
+    ctx = handler.handle(ctx)
+    criteria = ctx.filter_criteria
+    
+    assert criteria.area == None
 
 
+# No testeado
 def test_confirmation_flow(classifier, monkeypatch):
     # 3) simulamos confirmación
     monkeypatch.setattr(
@@ -82,22 +144,3 @@ def test_confirmation_flow(classifier, monkeypatch):
         "argumento": None
     }
 
-
-def test_fallback_intent(classifier, monkeypatch):
-    # 4) simulamos clasificación de intención genérica
-    monkeypatch.setattr(
-        classifier,
-        "classify_intent",
-        lambda msg: "info_beca"
-    )
-
-    result = classifier.classify(
-        message="¿Qué sabes de beca1?",
-        current_question=None,
-        available_options=None,
-        is_confirming=False
-    )
-    assert result == {
-        "intencion": "info_beca",
-        "argumento": None
-    }

@@ -12,14 +12,19 @@ class ScholarshipRepository(ABC):
     @abstractmethod
     def get_all_criteria(self, var) -> List[str]:
         ...
+        
 
 
 class IntentClassifierService(ABC):
     @abstractmethod
-    def classify(self, text: str) -> dict: ...
+    def classify_intention(self, text: str) -> dict: ...
     # @abstractmethod
     # def classify_all(self, text: str) -> dict: ...
     
+class ArgumentClassifierService(ABC):
+    @abstractmethod
+    def classify(self, text: str) -> dict: ...
+
 class ArgumentClassifierService(ABC):
     @abstractmethod
     def classify_(self, text: dict) -> dict: ...

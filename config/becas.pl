@@ -76,6 +76,7 @@ nivel(beca_upv_deporte, grado).
 nivel(beca_fp_valencia, postobligatoria_no_uni).
 nivel(beca_erasmus_master, posgrado).
 nivel(beca_gv_transporte, grado).
+nivel(beca_invent, otro).
 
 % 2.5 Ubicación geográfica
 ubicacion(beca_mec_general, espana).

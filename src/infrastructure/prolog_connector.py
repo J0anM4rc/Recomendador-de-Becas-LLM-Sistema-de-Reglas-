@@ -27,8 +27,8 @@ class PrologService:
             raise FileNotFoundError(f"KB not found at: {self.kb_path}")
 
         # Crear conexión a Prolog
-        self._mqi = PrologMQI()
-        self._thread = self._mqi.create_thread()
+        # self._mqi = PrologMQI()
+        # self._thread = self._mqi.create_thread()
 
         # Cargar la KB una sola vez, usando rutas con barras '/'
         self.path_str = self.kb_path.resolve().as_posix()
@@ -48,24 +48,25 @@ class PrologService:
             PrologConnectorError: otros errores Prolog.
         """
         try:
-            with self._thread as prolog:
-                prolog.query(f"consult('{self.path_str}')")
-                raw = prolog.query(goal)
-                if isinstance(raw, bool):
-                    if not raw:
+            with PrologMQI() as mqi:
+                with mqi.create_thread() as prolog:
+                    prolog.query(f"consult('{self.path_str}')")
+                    raw = prolog.query(goal)
+                    if isinstance(raw, bool):
+                        if not raw:
+                            raise NoResultsError(f"No results for goal: {goal}")
+                        raw = []
+                    rows = list(raw)
+                    if not rows:
                         raise NoResultsError(f"No results for goal: {goal}")
-                    raw = []
-                rows = list(raw)
-                if not rows:
-                    raise NoResultsError(f"No results for goal: {goal}")
-                filtered = []
-                for row in rows:
-                    entry = {v: row[v] for v in vars if v in row}
-                    if entry:
-                        filtered.append(entry)
-                if not filtered:
-                    raise NoResultsError(f"No vars found in results for goal: {goal}")
-                return filtered
+                    filtered = []
+                    for row in rows:
+                        entry = {v: row[v] for v in vars if v in row}
+                        if entry:
+                            filtered.append(entry)
+                    if not filtered:
+                        raise NoResultsError(f"No vars found in results for goal: {goal}")
+                    return filtered
         except PrologError as e:
             raise PrologConnectorError(f"Prolog error: {e}") from e
         except NoResultsError:
@@ -101,7 +102,7 @@ class PrologConnector(ScholarshipRepository):
     """
     def __init__(self, service: Optional[PrologService] = None, kb_path: Path = DEFAULT_KB_PATH):
         self.service = service or PrologService(kb_path)
-    def _get_criteria(self, criterion) -> List[str]:
+    def get_criteria(self, criterion) -> List[str]:
         rows = self.service.query(
             f"setof(Type, {criterion}(_,Type), Types)", ["Types"]
         )
@@ -110,7 +111,7 @@ class PrologConnector(ScholarshipRepository):
         # Asume que en tu KB hay hechos área/1
         all_names = []
         for criterion in criteria:
-            names = self._get_criteria(criterion)
+            names = self.get_criteria(criterion)
             all_names.extend(names)
         return sorted(set(all_names))
             

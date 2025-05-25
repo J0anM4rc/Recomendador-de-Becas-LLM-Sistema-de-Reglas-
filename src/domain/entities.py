@@ -39,3 +39,10 @@ class FilterCriteria:
                 setattr(self, f, None)    
     
     
+
+@dataclass
+class DialogAct:
+    type: str                    # p.e. "confirm_change", "ack_field", ...
+    field: str | None = None
+    old:   str | None = None
+    new:   str | None = None

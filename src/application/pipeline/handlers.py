@@ -1,7 +1,12 @@
 import re
+from typing import Optional
 from src.application.pipeline.interfaces import IHandler, HandlerContext
-from src.domain.interfaces import IntentClassifierService
+from src.domain.entities import DialogAct
+from src.domain.interfaces import IntentClassifierService, ArgumentClassifierService
 from src.infrastructure.intention_classifier import IntentionClassifier
+from src.infrastructure.argument_classifier import ArgumentClassifier
+from src.infrastructure.llm_response_builder import ResponseBuilder
+
 
 class PreprocessHandler(IHandler):
     def __init__(self, next_handler: IHandler = None):
@@ -49,25 +54,61 @@ class HistoryHandler(IHandler):
 
         return ctx
     
+class CriteriaSearchHandler(IHandler):
+    def __init__(
+        self,
+        classifier: ArgumentClassifierService = ArgumentClassifier(),
+        next_handler: Optional[IHandler] = None,
+        responder: "ResponseBuilder" = None,
+    ):
+        self.classifier = classifier
+        self.next = next_handler
+        self.responder = responder or ResponseBuilder()
+
+    # ---------- 1) Punto de entrada ----------
+    def handle(self, ctx: HandlerContext) -> HandlerContext:
+        # if ctx.last_intention != "buscar_por_criterio":
+        #     # Ni siquiera lo intento: paso al siguiente
+        #     return self.next.handle(ctx) if self.next else ctx
+
+        # ---- Intento clasificar dentro del flujo de criterios ----
+        result = self.classifier.classify_with_test_promt(
+            message=ctx.normalized_text,
+            available_options=ctx.filter_criteria.active_fields,
+            context=ctx.last_interaction()
+        )
+
+        if all(result.get(k) is not None for k in ("action", "field", "value")):
+            # 1) Lista de actos
+            acts: list[DialogAct] = []
+
+            # a) Acto principal que devuelve filter_criteria.apply()
+            act = ctx.filter_criteria.apply(result)      # puede ser None si no hubo cambio
+            if act:
+                acts.append(act)
+
+            # b) Preguntar el siguiente campo, si lo hay
+            if ctx.filter_criteria.has_pending_criteria():
+                next_field = ctx.filter_criteria.next_pending_field()
+                acts.append(DialogAct(type="ask_field", field=next_field))
+
+            # 2) Enviamos siempre la misma estructura al builder
+            ctx.response_message = self.responder.render(acts=acts, ctx=ctx)
+            return ctx  
+
+
+        return self.next.handle(ctx) if self.next else ctx
+
+    
 class IntentHandler(IHandler):
     def __init__(self, classifier: IntentClassifierService = IntentionClassifier(), next_handler: IHandler = None):
         self.classifier = classifier
         self.next = next_handler
 
     def handle(self, ctx: HandlerContext) -> HandlerContext:
-        if len(ctx.history) > 1:
-            # excluimos el último mensaje y tomamos hasta 4 antes de él
-            history_to_consider = ctx.history[:-1]
-            last_msgs = history_to_consider[-4:]
-        else:
-            last_msgs = []
-
-        # Formatear como texto para pasar al clasificador
-        history_snippet = "\n".join(
-            f"{msg['role'].capitalize()}: {msg['content']}" for msg in last_msgs
-        )
-
-        intent_result = self.classifier.classify(message = ctx.normalized_text, context=history_snippet, last_intention=ctx.last_intention)
+        history_snippet = ctx.last_interaction          
+            
+        intent_result = self.classifier.classify_intention(message = ctx.normalized_text, context=history_snippet, last_intention=ctx.last_intention)
         ctx.intention = intent_result.get("intention")
 
         # 2. Pasar al siguiente handler
@@ -75,6 +116,7 @@ class IntentHandler(IHandler):
             return self.next.handle(ctx)
         return ctx
     
-class ArgumentHandler(IHandler): pass
+
+    
 class FlowHandler(IHandler): pass
 class GenerationHandler(IHandler): pass

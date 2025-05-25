@@ -1,39 +1,48 @@
 {
     "max_history_turns": 5,
-    "guided_flow_steps": [
-        {
-            "name": "campo_estudio",
-            "label": "Área de estudios",
-            "prompt": "¿En qué área de estudios te interesan las becas?",
-            "options": ["ciencias_tecnicas", "ciencias_sociales", "arte_humanidades", "salud", "otros", "cualquiera"],
-            "error": "Por favor, elige un área de la lista o di 'cualquiera' si no tienes preferencia.",
-            "required": true
-        },
-        {
-            "name": "financiamiento",
-            "label": "Tipo de financiamiento",
-            "prompt": "¿Qué tipo de financiamiento buscas? ",
-            "options": ["completa", "parcial", "ayuda_transporte", "otros", "cualquiera"],
-            "error": "Indica el tipo de financiamiento o 'cualquiera'.",
-            "required": true
-        },
-        {
-            "name": "nivel",
-            "label": "Nivel educativo",
-            "prompt": "¿Para qué nivel educativo es la beca?",
-            "options": ["grado", "posgrado", "postobligatoria_no_uni", "otros", "cualquiera"],
-            "error": "Selecciona un nivel educativo o 'cualquiera'.",
-            "required": true
-        },
-        {
-            "name": "ubicacion",
+    "ask_field": {
+        "campo_estudio":
+            {
+                
+                "label": "Área de estudios",
+                "prompt": "¿En qué área de estudios te interesan las becas?",
+                "options": ["ciencias_tecnicas", "ciencias_sociales", "arte_humanidades", "salud", "otros", "cualquiera"],
+                "error": "Por favor, elige un área de la lista o di 'cualquiera' si no tienes preferencia.",
+                "required": true
+            },
+        "financiamiento":
+            {
+                "label": "Tipo de financiamiento",
+                "prompt": "¿Qué tipo de financiamiento buscas? ",
+                "options": ["completa", "parcial", "ayuda_transporte", "otros", "cualquiera"],
+                "error": "Indica el tipo de financiamiento o 'cualquiera'.",
+                "required": true
+            },
+        
+        "nivel": {
+                "label": "Nivel educativo",
+                "prompt": "¿Para qué nivel educativo es la beca?",
+                "options": ["grado", "posgrado", "postobligatoria_no_uni", "otros", "cualquiera"],
+                "error": "Selecciona un nivel educativo o 'cualquiera'.",
+                "required": true
+            },
+        
+        "ubicacion": {
             "label": "Ubicación",
             "prompt": "¿En qué ubicación geográfica te interesa estudiar?",
             "options": ["espana", "valencia", "europa", "cualquiera"],
             "error": "Elige una ubicación o 'cualquiera'.",
             "required": true
+        },
+        
+        "organismo": {
+            "label": "Organismo",  
+            "prompt": "¿Tienes preferencia por algún organismo que ofrezca becas?",
+            "options": ["publico_estatal", "publico_local", "internacional", "empresas", "cualquiera"],
+            "error": "Indica un organismo o 'cualquiera'.",
+            "required": false
         }
-    ],
+    },
     "confirmation_prompt": "He recogido estos datos para tu búsqueda:\n{collected_data_summary}\n\n¿Es todo correcto para que proceda con la búsqueda?",
     "confirmation_error_natural": "No estoy seguro de si confirmaste o no. Por favor, dime 'sí' si los datos son correctos, o 'no' si quieres cambiarlos o cancelar.",
     "chit_chat_prompt": "Historial:\n{history}\n\nUsuario: {user_message}\nAsistente (responde breve y amistosamente):",
