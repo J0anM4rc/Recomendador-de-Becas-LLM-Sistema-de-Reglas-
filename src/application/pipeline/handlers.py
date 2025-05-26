@@ -136,27 +136,37 @@ class CriteriaSearchHandler(IHandler):
                 ctx.response_message = self.responder.render(acts=acts, ctx=ctx)
                 return ctx  
 
-
-        return self.next.handle(ctx) if self.next else ctx
+            ctx.rejected_intentions.append("buscar_por_criterio")
+            return self.next.handle(ctx) if self.next else ctx
 
     
 class IntentHandler(IHandler):
-    def __init__(self, classifier: IntentClassifierService = IntentionClassifier(), search_by_criteria: IHandler = None):
+    def __init__(self, classifier: IntentClassifierService = IntentionClassifier(), search_by_criteria: IHandler = None, search_by_name: IHandler = None, responder : Optional[IHandler] = None):
         self.classifier = classifier
-        self.next = next_handler
+        self.search_by_criteria = search_by_criteria
+        self.search_by_name = search_by_name
+        self.responder = responder or TemplateResponseBuilder()
 
     def handle(self, ctx: HandlerContext) -> HandlerContext:
         history_snippet = ctx.last_interaction          
             
         intent_result = self.classifier.classify_intention(message = ctx.normalized_text, context=history_snippet, last_intention=ctx.last_intention)
-        ctx.intention = intent_result.get("intention")
+        intention = intent_result.get("intention")
+        
+        if intention in ctx.rejected_intentions or not intention:
+            intention = "general_qa"
+            
+        ctx.intention = intention
+        match intention:
+            case "buscar_por_criterio":
+                return self.search_by_criteria.handle(ctx)
+            case "info_beca":
+                return self.search_by_name.handle(ctx)
+            case _:
+                return self.responder.handle(ctx)
 
-        # 2. Pasar al siguiente handler
-        if self.next:
-            return self.next.handle(ctx)
-        return ctx
     
 
     
-class FlowHandler(IHandler): pass
+
 class GenerationHandler(IHandler): pass

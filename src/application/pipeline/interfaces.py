@@ -117,7 +117,7 @@ class HandlerContext:
     last_intention: Optional[str] = None
     raw_intent_payload: Dict[str, Any] = field(default_factory=dict)
     filter_criteria: Optional[BuscarPorCriterioDTO] = None
-    
+    rejected_intentions: List[str] = field(default_factory=list)
     history: List[Dict[str, str]] = field(default_factory=list)
     # sugerencias que puede devolver el handler
     suggestions: List[str] = field(default_factory=list)
