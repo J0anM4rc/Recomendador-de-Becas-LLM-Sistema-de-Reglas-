@@ -2,13 +2,13 @@
 
 import os
 import pytest
-from src.infrastructure.llm_interface import LLAMA
+from src.infrastructure.llm_interface import GEMMA
 from src.infrastructure.intention_classifier import IntentionClassifier
 
 @pytest.fixture(scope="session")
 def real_classifier():
     # Asegúrate de poner aquí la ruta donde tienes tu modelo LLAMA 3.2
-    llm = LLAMA()
+    llm = GEMMA()
     return IntentionClassifier(llm=llm)
 
 @pytest.mark.parametrize("msg,expected_intents", [

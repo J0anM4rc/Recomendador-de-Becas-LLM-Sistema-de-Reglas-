@@ -64,6 +64,7 @@ class CriteriaSearchHandler(IHandler):
         self.classifier = classifier
         self.next = next_handler
         self.responder = responder or TemplateResponseBuilder()
+        
 
     # ---------- 1) Punto de entrada ----------
     def handle(self, ctx: HandlerContext) -> HandlerContext:
@@ -90,7 +91,6 @@ class CriteriaSearchHandler(IHandler):
         # Caso 2: El usuario ha respondido todos los criterios y se le pregunta si confirma la búsqueda
         elif ctx.filter_criteria and ctx.filter_criteria.is_complete():
             # Si ya hay criterios y están completos, no hacemos nada
-            breakpoint()
             result = self.classifier.detect_confirmation(
                 context=ctx.last_interaction()
             )
@@ -141,7 +141,7 @@ class CriteriaSearchHandler(IHandler):
 
     
 class IntentHandler(IHandler):
-    def __init__(self, classifier: IntentClassifierService = IntentionClassifier(), next_handler: IHandler = None):
+    def __init__(self, classifier: IntentClassifierService = IntentionClassifier(), search_by_criteria: IHandler = None):
         self.classifier = classifier
         self.next = next_handler
 
