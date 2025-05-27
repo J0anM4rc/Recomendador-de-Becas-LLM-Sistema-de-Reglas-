@@ -58,11 +58,13 @@ class CriteriaSearchHandler(IHandler):
     def __init__(
         self,
         classifier: ArgumentClassifierService = ArgumentClassifier(),
-        next_handler: Optional[IHandler] = None,
-        responder: "TemplateResponseBuilder" = None,
+        basic_intention: IHandler = None, 
+        prolog_query: IHandler = None, 
+        responder : IHandler = None
     ):
         self.classifier = classifier
-        self.next = next_handler
+        self.basic_intention = basic_intention
+        self.prolog_query = prolog_query
         self.responder = responder or TemplateResponseBuilder()
         
 
@@ -141,10 +143,18 @@ class CriteriaSearchHandler(IHandler):
 
     
 class IntentHandler(IHandler):
-    def __init__(self, classifier: IntentClassifierService = IntentionClassifier(), search_by_criteria: IHandler = None, search_by_name: IHandler = None, responder : Optional[IHandler] = None):
+    def __init__(
+        self, 
+        classifier: IntentClassifierService = IntentionClassifier(), 
+        search_by_criteria: IHandler = None, 
+        scholarship_deadlines: IHandler = None, 
+        scholarship_criteria: IHandler = None, 
+        responder : IHandler = None
+    ):
         self.classifier = classifier
         self.search_by_criteria = search_by_criteria
-        self.search_by_name = search_by_name
+        self.scholarship_deadlines = scholarship_deadlines
+        self.scholarship_criteria = scholarship_criteria
         self.responder = responder or TemplateResponseBuilder()
 
     def handle(self, ctx: HandlerContext) -> HandlerContext:
@@ -160,8 +170,10 @@ class IntentHandler(IHandler):
         match intention:
             case "buscar_por_criterio":
                 return self.search_by_criteria.handle(ctx)
-            case "info_beca":
-                return self.search_by_name.handle(ctx)
+            case "plazos_beca":
+                return self.scholarship_deadlines.handle(ctx)
+            case "requisitos_beca":
+                return self.scholarship_criteria.handle(ctx)            
             case _:
                 return self.responder.handle(ctx)
 
