@@ -3,9 +3,9 @@ import json
 
 import pytest
 
-from src.application.pipeline.interfaces import BuscarPorCriterioDTO, HandlerContext
+from pipeline.handlers.protocols import BuscarPorCriterioDTO, HandlerContext
 from src.domain.entities import DialogAct
-from src.infrastructure.llm_interface import LLAMA
+from infrastructure.llm.gemma import LLAMA
 from src.infrastructure.llm_response_builder import (
     TemplateResponseBuilder
 )

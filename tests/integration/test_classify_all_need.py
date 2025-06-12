@@ -2,8 +2,8 @@
 
 import os
 import pytest
-from src.infrastructure.llm_interface import GEMMA
-from src.infrastructure.intention_classifier import IntentionClassifier
+from infrastructure.llm.gemma import GEMMA
+from infrastructure.nlu.intention import IntentionClassifier
 
 @pytest.fixture(scope="session")
 def real_classifier():

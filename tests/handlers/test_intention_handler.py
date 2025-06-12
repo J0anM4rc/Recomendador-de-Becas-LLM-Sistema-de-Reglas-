@@ -1,6 +1,6 @@
 import pytest
-from src.application.pipeline.handlers import IntentHandler
-from src.application.pipeline.interfaces import HandlerContext, IHandler
+from application.pipeline.general.handlers import IntentHandler
+from pipeline.handlers.protocols import HandlerContext, IHandler
 
 class DummyNextHandler(IHandler):
     def handle(self, ctx: HandlerContext) -> HandlerContext:

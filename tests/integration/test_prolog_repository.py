@@ -1,7 +1,7 @@
 # tests/test_integration_prolog_repository.py
 
 import pytest
-from src.infrastructure.prolog_connector import PrologService, PrologConnector
+from infrastructure.prolog.connector import PrologService, PrologConnector
 
 
 @pytest.fixture

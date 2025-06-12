@@ -6,4 +6,4 @@ app/
 deprecated/
 becas2.*
 comandos.*
-main.*
+chatbot_becas.egg-info/

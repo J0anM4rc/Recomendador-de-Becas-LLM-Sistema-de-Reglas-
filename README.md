@@ -29,7 +29,6 @@ Un asistente conversacional en lenguaje natural para guiar a estudiantes en la b
 
 - Python 3.10+  
 - Git  
-- (Opcional) Docker  
 
 ### Instalación local
 

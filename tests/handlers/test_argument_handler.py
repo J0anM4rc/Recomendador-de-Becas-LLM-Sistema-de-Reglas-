@@ -2,10 +2,10 @@
 import pytest
 from typing import Any, Dict, List, Optional
 
-from src.application.pipeline.handlers import CriteriaSearchHandler
-from src.application.pipeline.interfaces import BuscarPorCriterioDTO, HandlerContext, IHandler
-from src.infrastructure.prolog_connector import ScholarshipRepository
-from src.infrastructure.argument_classifier import ArgumentClassifier
+from application.pipeline.general.handlers import CriteriaSearchHandler
+from pipeline.handlers.protocols import BuscarPorCriterioDTO, HandlerContext, IHandler
+from infrastructure.prolog.connector import ScholarshipRepository
+from infrastructure.nlu.slots import ArgumentClassifier
 
 class DummyNextHandler(IHandler):
     def handle(self, ctx: HandlerContext) -> HandlerContext:

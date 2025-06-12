@@ -1,7 +1,7 @@
 import pytest
 
-from src.application.pipeline.handlers import HistoryHandler
-from src.application.pipeline.interfaces import HandlerContext, IHandler
+from application.pipeline.general.handlers import HistoryHandler
+from pipeline.handlers.protocols import HandlerContext, IHandler
 
 
 class DummyNextHandler(IHandler):

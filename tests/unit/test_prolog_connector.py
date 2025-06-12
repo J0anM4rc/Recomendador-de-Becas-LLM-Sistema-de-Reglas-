@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 from swiplserver import PrologError
-from src.infrastructure.prolog_connector import PrologService, PrologConnectorError, NoResultsError
+from infrastructure.prolog.connector import PrologService, PrologConnectorError, NoResultsError
 
 class DummyThread:
     def __init__(self, response):

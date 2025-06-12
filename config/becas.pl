@@ -79,7 +79,7 @@ nivel(beca_gv_transporte, grado).
 nivel(beca_invent, otro).
 
 % 2.5 Ubicación geográfica
-ubicacion(beca_mec_general, espana).
+ubicacion(beca_mec_general, españa).
 ubicacion(beca_upv_deporte, valencia).
 ubicacion(beca_fp_valencia, valencia).
 ubicacion(beca_erasmus_master, europa).
