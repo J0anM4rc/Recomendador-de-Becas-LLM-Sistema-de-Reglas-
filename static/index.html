@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chatbot Becas</title>
+  <style>
+    /* ========= Estilos básicos ========= */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* para centrar horizontalmente el .chat-container */
+      justify-content: center; /* si quieres centrarlo también verticalmente */
+    }
+
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      width: 70%;       /* ocupa siempre el 80% de la anchura del viewport */
+      max-width: none;  /* quitar cualquier límite fijo */
+      min-width: 0;     /* quitar cualquier mínimo fijo */
+      height: 90vh;     /* opcional: mantenerlo casi a pantalla completa en altura */
+      margin: 0 auto;   /* centrar horizontal (por si cambias align-items) */
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      overflow: hidden;
+      box-sizing: border-box;
+      background-color: #fafafa;
+    }
+
+    .chat-log {
+      flex: 1;
+      padding: 1rem;
+      overflow-y: auto;
+      background-color: #f9f9f9;
+    }
+
+    .message {
+      margin-bottom: 0.75rem;
+      line-height: 1.4;
+    }
+    .message.user {
+      text-align: right;
+    }
+    .message.user .bubble {
+      background-color: #0084ff;
+      color: white;
+      display: inline-block;
+      padding: 0.5rem 0.75rem;
+      border-radius: 16px 16px 4px 16px;
+      max-width: 80%;
+    }
+    .message.bot .bubble {
+      background-color: #e5e5ea;
+      color: #000;
+      display: inline-block;
+      padding: 0.5rem 0.75rem;
+      border-radius: 4px 16px 16px 16px;
+      max-width: 80%;
+    }
+
+    .input-container {
+      display: flex;
+      border-top: 1px solid #ccc;
+      background-color: white;
+    }
+    .input-container input {
+      flex: 1;
+      border: none;
+      padding: 0.75rem;
+      font-size: 1rem;
+      outline: none;
+    }
+    .input-container button {
+      border: none;
+      background-color: #0084ff;
+      color: white;
+      padding: 0 1rem;
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .input-container button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="chat-container">
+    <!-- Contenedor donde irán los mensajes -->
+    <div id="chatLog" class="chat-log"></div>
+
+    <!-- Input y botón de enviar -->
+    <div class="input-container">
+      <input
+        type="text"
+        id="userInput"
+        placeholder="Escribe tu mensaje…"
+        autocomplete="off"
+      />
+      <button id="sendBtn">Enviar</button>
+    </div>
+  </div>
+
+  <script>
+    // ====== Configuración ======
+    // Cambia esta URL si tu backend no corre en localhost:8000
+    const API_URL = "http://localhost:8000/chat";
+
+    let sessionId = null;
+
+    // Referencias a elementos del DOM
+    const chatLog   = document.getElementById("chatLog");
+    const userInput = document.getElementById("userInput");
+    const sendBtn   = document.getElementById("sendBtn");
+
+    // ====== Funciones auxiliares ======
+    function appendMessage(role, text) {
+      const wrapper = document.createElement("div");
+      wrapper.classList.add("message", role);
+      const bubble = document.createElement("div");
+      bubble.classList.add("bubble");
+      bubble.innerHTML = text.replace(/\n/g, "<br>");
+      wrapper.appendChild(bubble);
+      chatLog.appendChild(wrapper);
+      chatLog.scrollTop = chatLog.scrollHeight;
+    }
+
+    function setInputEnabled(enabled) {
+      userInput.disabled = !enabled;
+      sendBtn.disabled = !enabled;
+    }
+
+    // ====== Enviar mensaje ======
+    async function sendMessage() {
+      const text = userInput.value.trim();
+      if (!text) return;
+
+      appendMessage("user", text);
+      userInput.value = "";
+      setInputEnabled(false);
+
+      const payload = {
+        message: text,
+        session_id: sessionId
+      };
+
+      try {
+        const response = await fetch(API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!response.ok) throw new Error(`Error ${response.status}`);
+        const data = await response.json();
+
+        sessionId = data.session_id;
+        const botText = data.response || "(sin respuesta)";
+        appendMessage("bot", botText);
+
+      } catch (err) {
+        console.error(err);
+        appendMessage("bot", "⚠️ Error al conectar con el servidor.");
+      } finally {
+        setInputEnabled(true);
+        userInput.focus();
+      }
+    }
+
+    // ====== Eventos ======
+    sendBtn.addEventListener("click", sendMessage);
+    userInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    // ====== Mensaje inicial del bot ======
+    document.addEventListener("DOMContentLoaded", () => {
+      // Desactivar temporalmente el input hasta after el saludo (opcional)
+      setInputEnabled(false);
+
+      // Mensaje de bienvenida (puede ser lo que tú quieras)
+      appendMessage("bot",
+        "<b>¡Hola!</b> 😃\nBienvenido al Chatbot de Becas.\n\n" +
+        "Aquí puedes:\n" +
+        "  • <b>Encontrar convocatorias</b> según tu nivel de estudios y área.\n" +
+        "  • <b>Conocer requisitos</b> y plazos de solicitud.\n" +
+        "  • <b>Resolver dudas</b> sobre documentación y procesos.\n\n" +
+        "Por ejemplo, puedes escribir:\n" +
+        "  • “¿Qué becas hay para grado de Ingeniería?”\n" +
+        "  • “Requisitos para becas de máster en Ciencias Sociales.”\n\n" +
+        "¿En qué puedo ayudarte hoy?"
+      );
+
+      // Activamos el input después de, digamos, 200 ms (solo para simular “tiempo de respuesta”)
+      setTimeout(() => {
+        setInputEnabled(true);
+        userInput.focus();
+      }, 300);
+    });
+  </script>
+</body>
+</html>

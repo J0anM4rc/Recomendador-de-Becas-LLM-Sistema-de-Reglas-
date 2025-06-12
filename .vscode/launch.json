@@ -1,0 +1,33 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: FastAPI (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      // Lanza el módulo uvicorn para servir tu app
+      "module": "uvicorn",
+      "args": [
+        "src.main:app",     // Ajusta al path de tu archivo FastAPI
+        "--reload",
+        "--port", "8000"
+      ],
+      "jinja": true,
+      "justMyCode": true
+    },
+    {
+      "name": "Python: Factory (con PYTHONPATH)",
+      "type": "debugpy",
+      "request": "launch",
+      // Ejecuta el script concreto:
+      "program": "${workspaceFolder}/src/application/pipeline/factory.py",
+      "console": "integratedTerminal",
+      // Asegura que la carpeta raíz esté en sys.path
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}"
+      },
+      "justMyCode": true
+    }
+  ]
+}
